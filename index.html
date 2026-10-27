@@ -8,22 +8,24 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <style>
   html, body { margin:0; height:100%; overflow:hidden; font-family:system-ui,sans-serif; }
-  #ui { position:fixed; left:0; right:0; bottom:0; z-index:10; padding:10px 12px 16px;
-        background:linear-gradient(transparent, rgba(0,0,0,.65)); color:#fff; text-align:center; pointer-events:none; }
-  #titulo { font-weight:700; font-size:16px; margin-bottom:6px; }
-  #texto { font-size:13px; opacity:.92; min-height:2.6em; }
-  #botones { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:8px; pointer-events:auto; }
-  #botones button { border:0; border-radius:20px; padding:9px 14px; font-size:14px; font-weight:600;
-                    background:#fff; color:#222; }
-  #botones button:active { background:#ddd; }
-  #hint { position:fixed; top:14px; left:0; right:0; text-align:center; z-index:10; color:#fff;
-          font-size:14px; text-shadow:0 1px 4px #000; pointer-events:none; padding:0 16px; }
-  #loading { position:fixed; inset:0; z-index:20; background:#10213a; color:#fff; display:flex;
-             align-items:center; justify-content:center; text-align:center; padding:24px; font-size:17px; }
+  #ui { position:fixed; left:0; right:0; bottom:0; z-index:10; padding:26px 12px 14px;
+        background:linear-gradient(transparent, rgba(0,0,0,.72) 35%); color:#fff; text-align:center; pointer-events:none; }
+  #titulo { font-weight:700; font-size:16px; margin-bottom:4px; }
+  #texto { font-size:13px; opacity:.94; min-height:2.6em; max-width:640px; margin:0 auto; }
+  #botones, #nav { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:8px; pointer-events:auto; }
+  #botones button { border:0; border-radius:20px; padding:8px 13px; font-size:14px; font-weight:600; background:#fff; color:#222; }
+  #nav { display:none; align-items:center; gap:10px; }
+  #nav button { border:0; border-radius:22px; padding:11px 20px; font-size:16px; font-weight:700; background:#ffd60a; color:#222; }
+  #nav span { font-size:13px; font-weight:600; min-width:120px; }
+  button:active { opacity:.7; }
+  #hint { position:fixed; top:14px; left:0; right:0; text-align:center; z-index:10; color:#fff; font-size:14px;
+          text-shadow:0 1px 4px #000; pointer-events:none; padding:0 110px 0 16px; }
+  #loading { position:fixed; inset:0; z-index:20; background:#10213a; color:#fff; display:flex; align-items:center;
+             justify-content:center; text-align:center; padding:24px; font-size:17px; }
   #demoBtn { position:fixed; top:10px; right:10px; z-index:40; border:0; border-radius:20px; padding:9px 14px;
              font-size:14px; font-weight:700; background:#ffd60a; color:#222; box-shadow:0 2px 8px rgba(0,0,0,.4); }
-  #chips { position:fixed; top:56px; left:0; right:0; z-index:30; display:none; justify-content:center;
-           gap:6px; flex-wrap:wrap; padding:0 10px; }
+  #chips { position:fixed; top:56px; left:0; right:0; z-index:30; display:none; justify-content:center; gap:6px;
+           flex-wrap:wrap; padding:0 10px; }
   #chips button { border:0; border-radius:16px; padding:7px 12px; font-size:13px; font-weight:600;
                   background:rgba(255,255,255,.85); color:#222; }
   #chips button.on { background:#ffd60a; }
@@ -33,371 +35,415 @@
 <button id="demoBtn">Ver sin cámara</button>
 <div id="chips"></div>
 <div id="loading">Cargando realidad aumentada…<br>Acepta el permiso de la cámara.</div>
-<div id="hint">Enfoca una zona del esquema: tira, curva, diluciones, competitivo o marcadores.</div>
+<div id="hint">Enfoca la hoja completa y mantenla en el encuadre.</div>
 <div id="ui">
   <div id="titulo"></div>
   <div id="texto"></div>
   <div id="botones"></div>
+  <div id="nav"><button id="prev">◀</button><span id="navtxt"></span><button id="next">▶</button></div>
 </div>
 
-<a-scene mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 2; filterMinCF: 0.0001; filterBeta: 0.001; warmupTolerance: 5; missTolerance: 10; uiLoading: no; uiScanning: no;"
+<a-scene mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.001; filterBeta: 1000; warmupTolerance: 4; missTolerance: 30; uiLoading: no; uiScanning: no;"
          color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights: true"
          vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
   <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
   <a-entity light="type: ambient; intensity: 1.1"></a-entity>
   <a-entity light="type: directional; intensity: 0.8" position="1 2 2"></a-entity>
 
-  <!-- 0: tira inmunocromatografica (aspecto 945x205) -->
-  <a-entity id="t0" mindar-image-target="targetIndex: 0"><a-entity id="escena-tira" position="0 0 0"></a-entity></a-entity>
-  <!-- 1: competitivo / no competitivo (975x340) -->
-  <a-entity id="t1" mindar-image-target="targetIndex: 1"><a-entity id="escena-comp" position="0 0 0"></a-entity></a-entity>
-  <!-- 2: curva patron (860x175) -->
-  <a-entity id="t2" mindar-image-target="targetIndex: 2"><a-entity id="escena-curva" position="0 0 0"></a-entity></a-entity>
-  <!-- 3: diluciones (515x215) -->
-  <a-entity id="t3" mindar-image-target="targetIndex: 3"><a-entity id="escena-dil" position="0 0 0"></a-entity></a-entity>
-  <!-- 4: marcadores (610x255) -->
-  <a-entity id="t4" mindar-image-target="targetIndex: 4"><a-entity id="escena-marc" position="0 0 0"></a-entity></a-entity>
+  <!-- UNICO objetivo: la hoja completa. Ancho = 1, alto = 0.706 (2000x1412 px) -->
+  <a-entity id="hoja-target" mindar-image-target="targetIndex: 0">
+    <a-plane id="hoja-img" src="esquema.jpg" width="1" height="0.706" visible="false"></a-plane>
+    <a-plane id="velo" width="1" height="0.706" color="#000" opacity="0.55" position="0 0 0.006" visible="false"></a-plane>
+    <a-entity id="marco"></a-entity>
+    <a-entity id="grupo">
+      <a-entity id="panel"></a-entity>
+      <a-entity id="escena-tira"></a-entity>
+      <a-entity id="escena-comp"></a-entity>
+      <a-entity id="escena-curva"></a-entity>
+      <a-entity id="escena-dil"></a-entity>
+      <a-entity id="escena-marc"></a-entity>
+    </a-entity>
+  </a-entity>
 </a-scene>
 
 <script>
-/* Unidades: el ancho de la imagen objetivo mide 1. Alto = h/w de cada recorte. */
-const AR = { tira:[945,205], comp:[975,340], curva:[860,175], dil:[515,215], marc:[610,255] };
-const H = k => AR[k][1] / AR[k][0];
-
-/* ---------- utilidades para crear entidades ---------- */
+/* ---------- utilidades ---------- */
+const $ = id => document.getElementById(id);
 function el(parent, tag, attrs = {}) {
   const e = document.createElement(tag);
   for (const k in attrs) e.setAttribute(k, attrs[k]);
   parent.appendChild(e);
   return e;
 }
-const box   = (p,pos,size,color,extra={}) => el(p,'a-box',{position:pos,width:size[0],height:size[1],depth:size[2],color,...extra});
-const ball  = (p,pos,r,color,extra={}) => el(p,'a-sphere',{position:pos,radius:r,color,'segments-width':20,'segments-height':14,...extra});
+const box  = (p, pos, size, color, extra = {}) => el(p, 'a-box', { position: pos, width: size[0], height: size[1], depth: size[2], color, ...extra });
+const ball = (p, pos, r, color, extra = {}) => el(p, 'a-sphere', { position: pos, radius: r, color, 'segments-width': 20, 'segments-height': 14, ...extra });
+const txt  = (p, value, pos, width, color = '#fff', extra = {}) => el(p, 'a-text', { value, position: pos, width, color, align: 'center', 'wrap-count': Math.max(value.length + 1, 4), font: 'dejavu', ...extra });
 function anim(e, prop, to, dur, extra = {}) {
-  e.setAttribute('animation__' + prop.replace(/\W/g,''), { property:prop, to, dur, easing:'easeInOutQuad', ...extra });
+  e.setAttribute('animation__' + prop.replace(/\W/g, ''), { property: prop, to, dur, easing: 'easeInOutQuad', ...extra });
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-/* ---------- panel inferior ---------- */
-const ui = { t:document.getElementById('titulo'), x:document.getElementById('texto'), b:document.getElementById('botones') };
-function panel(titulo, texto, botones = []) {
-  ui.t.textContent = titulo; ui.x.textContent = texto; ui.b.innerHTML = '';
-  botones.forEach(([nombre, fn]) => {
-    const b = document.createElement('button'); b.textContent = nombre; b.onclick = fn; ui.b.appendChild(b);
-  });
-  document.getElementById('hint').style.display = 'none';
-}
 function limpiar(e) { while (e.firstChild) e.removeChild(e.firstChild); }
 
+/* ---------- panel de texto ---------- */
+const ui = { t: $('titulo'), x: $('texto'), b: $('botones') };
+function panel(titulo, texto, botones = []) {
+  ui.t.textContent = titulo; ui.x.textContent = texto; ui.b.innerHTML = '';
+  botones.forEach(([nombre, fn]) => { const b = document.createElement('button'); b.textContent = nombre; b.onclick = fn; ui.b.appendChild(b); });
+}
+
 /* =====================================================================
-   1) TIRA INMUNOCROMATOGRAFICA
+   ZONAS DE LA HOJA (px en la imagen de 2000x1412) y tamano de cada animacion
    ===================================================================== */
-const tira = { run: 0, modo: 'nocomp' };
-function montarTira(res) {
-  const root = document.getElementById('escena-tira');
-  limpiar(root); const id = ++tira.run;
-  const h = H('tira'), W = 1, y0 = 0;                // centro del target en (0,0)
-  const base = el(root, 'a-entity', { position: `0 ${h*0.0} 0.03`, rotation: '-35 0 0' }); // tira inclinada para verse en 3D
-  // cuerpo de la tira
-  box(base, '0 0 0', [W, h*0.55, 0.04], '#f4ead2');
-  // zonas: siembra, conjugado, T, C, absorbente
-  const x = { siembra:-0.40, conj:-0.26, T:0.10, C:0.27, abs:0.41 };
-  box(base, `${x.siembra} 0 0.025`, [0.12, h*0.55, 0.01], '#9bd0ff');
-  box(base, `${x.conj} 0 0.025`, [0.12, h*0.55, 0.01], '#f2c14e');
-  box(base, `${x.abs} 0 0.025`, [0.14, h*0.55, 0.012], '#9aa0a6');
-  const lineaT = box(base, `${x.T} 0 0.027`, [0.014, h*0.55, 0.004], '#d93a3a', { opacity: 0 });
-  const lineaC = box(base, `${x.C} 0 0.027`, [0.014, h*0.55, 0.004], '#d93a3a', { opacity: 0 });
-  // etiquetas
-  const lab = (t, px) => el(base, 'a-text', { value:t, align:'center', color:'#fff', width:0.3, position:`${px} ${h*0.50} 0.03`, 'wrap-count':14 });
-  lab('Siembra', x.siembra); lab('Conjugado', x.conj); lab('T', x.T); lab('C', x.C); lab('Absorb.', x.abs);
-  // flecha de flujo
-  el(base, 'a-text', { value:'FLUJO >', align:'center', color:'#ff8080', width:0.4, position:`0 ${-h*0.38} 0.03` });
-
-  // gota que cae
-  const gota = ball(root, `${x.siembra} ${h*0.9} 0.12`, 0.04, '#3b8bff');
-  anim(gota, 'position', `${x.siembra} 0 0.06`, 900);
-
-  (async () => {
-    await sleep(1000); if (tira.run !== id) return;
-    root.removeChild(gota);
-    // particulas de oro que avanzan con la muestra
-    const n = 9, parts = [];
-    for (let i = 0; i < n; i++) {
-      const p = ball(base, `${x.conj} ${(i%3-1)*h*0.13} 0.06`, 0.018, '#d4a017');
-      parts.push(p);
-    }
-    const llegaT = res.T, llegaC = res.C;
-    parts.forEach((p, i) => anim(p, 'position', `${x.T - 0.02 + (i%3)*0.015} ${(i%3-1)*h*0.13} 0.06`, 2200 + i*80));
-    await sleep(2500); if (tira.run !== id) return;
-    if (llegaT) lineaT.setAttribute('opacity', 1);
-    // el exceso sigue hacia C
-    const resto = parts.slice(0, llegaT ? 6 : 9);
-    resto.forEach((p, i) => anim(p, 'position', `${x.C - 0.02 + (i%3)*0.015} ${(i%3-1)*h*0.13} 0.06`, 1700 + i*60));
-    await sleep(2000); if (tira.run !== id) return;
-    if (llegaC) lineaC.setAttribute('opacity', 1);
-    panel(
-      res.titulo, res.texto,
-      botonesTira()
-    );
-  })();
-}
-const RESULTADOS_TIRA = {
-  nocomp_pos: { T:1, C:1, titulo:'No competitiva · POSITIVO', texto:'Hay analito: se forma el complejo y se capta en T. El exceso de conjugado se capta en C. Bandas T y C.' },
-  nocomp_neg: { T:0, C:1, titulo:'No competitiva · NEGATIVO', texto:'Sin analito no se forma el complejo en T. Solo se ve la banda de control C.' },
-  nocomp_inv: { T:0, C:0, titulo:'No competitiva · INVÁLIDO', texto:'Sin banda C el test no es válido, aunque aparezca T. Hay que repetirlo.' },
-  comp_pos:   { T:0, C:1, titulo:'Competitiva · POSITIVO', texto:'El Ag de la muestra compite con el Ag fijado en T por el Ac marcado: T desaparece. Solo C.' },
-  comp_neg:   { T:1, C:1, titulo:'Competitiva · NEGATIVO', texto:'Sin Ag en la muestra, el Ac marcado se une al Ag fijado en T: aparecen T y C.' },
-  comp_inv:   { T:0, C:0, titulo:'Competitiva · INVÁLIDO', texto:'Sin banda C el test no es válido.' },
+const SEQ = ['comp', 'curva', 'dil', 'marc', 'tira'];
+const NOM = { comp: 'Competitivo / no comp.', curva: 'Curva patrón', dil: 'Diluciones', marc: 'Marcadores', tira: 'Inmunocromatografía' };
+const ZONA = {
+  comp:  { r: [15, 680, 990, 1020],   W: 0.78, PH: 0.64 },
+  curva: { r: [1030, 440, 1890, 615], W: 0.80, PH: 0.56 },
+  dil:   { r: [1465, 265, 1980, 480], W: 0.78, PH: 0.56 },
+  marc:  { r: [400, 1090, 1010, 1345], W: 0.76, PH: 0.52 },
+  tira:  { r: [1020, 855, 1965, 1060], W: 0.84, PH: 0.56 },
 };
-function botonesTira() {
-  const m = tira.modo;
-  return [
-    ['Positivo', () => lanzarTira(m + '_pos')],
-    ['Negativo', () => lanzarTira(m + '_neg')],
-    ['Inválido', () => lanzarTira(m + '_inv')],
-    [m === 'nocomp' ? 'Ver competitiva' : 'Ver no competitiva', () => { tira.modo = m === 'nocomp' ? 'comp' : 'nocomp'; lanzarTira(tira.modo + '_pos'); }],
-  ];
+const SW = 2000, SH = 1412, HH = SH / SW / 2;           // semialto de la hoja en unidades
+const px2x = x => x / SW - 0.5, px2y = y => HH - y / SW;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function colocar(k) {
+  const z = ZONA[k], [x0, y0, x1, y1] = z.r;
+  const zx = px2x((x0 + x1) / 2), zy = px2y((y0 + y1) / 2);
+  const hw = 0.56 * z.W, hh = z.PH * z.W / 2;
+  const gx = clamp(zx, -0.5 + hw, 0.5 - hw), gy = clamp(zy, -HH + hh, HH - hh);
+  $('grupo').setAttribute('position', `${gx} ${gy} 0.03`);
+  $('grupo').setAttribute('scale', `${z.W} ${z.W} ${z.W}`);
+  const pn = $('panel'); limpiar(pn);
+  el(pn, 'a-plane', { width: 1.12, height: z.PH + 0.01, color: '#ffd60a', position: '0 0 -0.004' });
+  el(pn, 'a-plane', { width: 1.10, height: z.PH - 0.02, color: '#0c2340', position: '0 0 0' });
+  const mc = $('marco'); limpiar(mc);
+  const cw = (x1 - x0) / SW, ch = (y1 - y0) / SW, t = 0.004;
+  const ln = (px, py, w, h) => el(mc, 'a-plane', { position: `${px} ${py} 0.012`, width: w, height: h, color: '#ffd60a' });
+  ln(zx, zy + ch / 2, cw, t); ln(zx, zy - ch / 2, cw, t); ln(zx - cw / 2, zy, t, ch); ln(zx + cw / 2, zy, t, ch);
+  const d = Math.hypot(gx - zx, gy - zy);
+  if (d > 0.08) {
+    const ang = Math.atan2(gy - zy, gx - zx) * 180 / Math.PI;
+    el(mc, 'a-plane', { position: `${(gx + zx) / 2} ${(gy + zy) / 2} 0.012`, width: d, height: 0.003, color: '#ffd60a', rotation: `0 0 ${ang}` });
+  }
+  $('velo').setAttribute('visible', true);
 }
-function lanzarTira(k) { const r = RESULTADOS_TIRA[k]; panel(r.titulo, 'Corriendo la muestra…'); montarTira(r); }
 
 /* =====================================================================
-   2) COMPETITIVO vs NO COMPETITIVO (sandwich)
+   1) COMPETITIVO vs NO COMPETITIVO
    ===================================================================== */
 const comp = { run: 0 };
-function anticuerpo(parent, pos, color, rot = '0 0 0', s = 1) {
-  const g = el(parent, 'a-entity', { position: pos, rotation: rot, scale: `${s} ${s} ${s}` });
-  box(g, '0 0.035 0', [0.012, 0.07, 0.012], color);
-  box(g, '-0.022 0.085 0', [0.012, 0.045, 0.012], color, { rotation: '0 0 35' });
-  box(g, '0.022 0.085 0', [0.012, 0.045, 0.012], color, { rotation: '0 0 -35' });
+function anticuerpo(parent, pos, color, rot = '0 0 0') {
+  const g = el(parent, 'a-entity', { position: pos, rotation: rot });
+  box(g, '0 0.035 0', [0.014, 0.07, 0.014], color);
+  box(g, '-0.022 0.085 0', [0.014, 0.045, 0.014], color, { rotation: '0 0 35' });
+  box(g, '0.022 0.085 0', [0.014, 0.045, 0.014], color, { rotation: '0 0 -35' });
   return g;
 }
 function montarComp(tipo) {
-  const root = document.getElementById('escena-comp'); limpiar(root); const id = ++comp.run; root.setAttribute('scale', '0.65 0.65 0.65'); root.setAttribute('position', '0 0.06 0');
-  const h = H('comp'); const baseY = -h * 0.30;
-  box(root, `0 ${baseY} 0.01`, [0.85, 0.02, 0.2], '#8aa0b8');   // pocillo / superficie
+  const root = $('escena-comp'); limpiar(root); const id = ++comp.run;
+  const h = 0.349, baseY = -h * 0.30;
+  root.setAttribute('scale', '1 1 1'); root.setAttribute('position', '0 0.03 0');
+  box(root, `0 ${baseY} 0.01`, [0.85, 0.02, 0.2], '#8aa0b8');
+  const btns = [['Repetir', () => montarComp(tipo)], [tipo === 'sand' ? 'Ver competitivo' : 'Ver sándwich', () => montarComp(tipo === 'sand' ? 'comp' : 'sand')]];
   if (tipo === 'sand') {
-    panel('No competitivo (sándwich)', 'Anticuerpo de captura fijo en la placa…', [['Repetir', () => montarComp('sand')], ['Ver competitivo', () => montarComp('comp')]]);
+    const T = 'No competitivo (sándwich)';
+    panel(T, 'Anticuerpo de captura fijo en la placa…', btns);
     const xs = [-0.25, 0, 0.25];
-    const caps = xs.map(px => anticuerpo(root, `${px} ${baseY + 0.01} 0.05`, '#2a9d8f'));
+    xs.forEach(px => anticuerpo(root, `${px} ${baseY + 0.01} 0.05`, '#2a9d8f'));
+    txt(root, 'Ac captura', `0 ${baseY - 0.05} 0.05`, 0.3, '#9fd8cf');
     (async () => {
       await sleep(1500); if (comp.run !== id) return;
-      panel('No competitivo (sándwich)', 'Llega el antígeno de la muestra y se une al anticuerpo de captura.', [['Repetir', () => montarComp('sand')], ['Ver competitivo', () => montarComp('comp')]]);
-      const ags = xs.map(px => { const b = ball(root, `${px} ${h*0.9} 0.05`, 0.028, '#d62828'); anim(b, 'position', `${px} ${baseY + 0.115} 0.05`, 1400); return b; });
+      panel(T, 'Llega el antígeno de la muestra y se une al anticuerpo de captura.', btns);
+      xs.forEach(px => { const b = ball(root, `${px} ${h * 0.9} 0.05`, 0.028, '#d62828'); anim(b, 'position', `${px} ${baseY + 0.115} 0.05`, 1400); });
       await sleep(1900); if (comp.run !== id) return;
-      panel('No competitivo (sándwich)', 'Se añade el anticuerpo marcado, que se pega encima del antígeno.', [['Repetir', () => montarComp('sand')], ['Ver competitivo', () => montarComp('comp')]]);
-      const labs = xs.map(px => { const g = anticuerpo(root, `${px} ${h*0.9} 0.05`, '#f4a261', '180 0 0'); anim(g, 'position', `${px} ${baseY + 0.20} 0.05`, 1400); return g; });
+      panel(T, 'Se añade el anticuerpo marcado, que se pega encima del antígeno.', btns);
+      xs.forEach(px => { const g = anticuerpo(root, `${px} ${h * 0.9} 0.05`, '#f4a261', '180 0 0'); anim(g, 'position', `${px} ${baseY + 0.20} 0.05`, 1400); });
       await sleep(1900); if (comp.run !== id) return;
-      xs.forEach(px => { const s = ball(root, `${px} ${baseY + 0.27} 0.05`, 0.0, '#ffd60a', { material: 'shader: flat; color: #ffd60a' }); anim(s, 'radius', 0.022, 700); });
-      panel('No competitivo (sándwich)', 'Se enciende la señal: MÁS señal = MÁS antígeno en la muestra (relación directa).', [['Repetir', () => montarComp('sand')], ['Ver competitivo', () => montarComp('comp')]]);
+      xs.forEach(px => { const s = ball(root, `${px} ${baseY + 0.28} 0.05`, 0.0, '#ffd60a', { material: 'shader: flat; color: #ffd60a' }); anim(s, 'radius', 0.025, 700); });
+      panel(T, 'Se enciende la señal: MÁS señal = MÁS antígeno en la muestra (relación directa).', btns);
     })();
   } else {
-    const msg = (t) => panel('Competitivo', t, [['Repetir', () => montarComp('comp')], ['Ver sándwich', () => montarComp('sand')]]);
-    msg('Pocas moléculas de antígeno en la muestra: el antígeno marcado (naranja) ocupa casi todos los sitios.');
+    const T = 'Competitivo';
+    panel(T, 'Pocas moléculas de antígeno en la muestra: el antígeno marcado (naranja) ocupa casi todos los sitios.', btns);
     const xs = [-0.30, -0.15, 0, 0.15, 0.30];
     xs.forEach(px => anticuerpo(root, `${px} ${baseY + 0.01} 0.05`, '#2a9d8f'));
-    const marcados = []; const muestra = [];
+    const marcados = [];
     (async () => {
-      // fase 1: poco antigeno de muestra -> mucha senal
-      xs.slice(0, 4).forEach(px => { const b = ball(root, `${px} ${h*0.9} 0.05`, 0.026, '#ff9f1c'); anim(b, 'position', `${px} ${baseY + 0.115} 0.05`, 1300); marcados.push(b); });
-      const m0 = ball(root, `${xs[4]} ${h*0.9} 0.05`, 0.026, '#d62828'); anim(m0, 'position', `${xs[4]} ${baseY + 0.115} 0.05`, 1300); muestra.push(m0);
+      xs.slice(0, 4).forEach(px => { const b = ball(root, `${px} ${h * 0.9} 0.05`, 0.026, '#ff9f1c'); anim(b, 'position', `${px} ${baseY + 0.115} 0.05`, 1300); marcados.push(b); });
+      const m0 = ball(root, `${xs[4]} ${h * 0.9} 0.05`, 0.026, '#d62828'); anim(m0, 'position', `${xs[4]} ${baseY + 0.115} 0.05`, 1300);
       await sleep(1800); if (comp.run !== id) return;
-      msg('Con POCO Ag en la muestra se une mucho antígeno marcado: señal ALTA.');
+      panel(T, 'Con POCO Ag en la muestra se une mucho antígeno marcado: señal ALTA.', btns);
       const barra = box(root, `0.45 ${baseY + 0.12} 0.05`, [0.05, 0.28, 0.03], '#ffd60a');
-      await sleep(2200); if (comp.run !== id) return;
-      // fase 2: mucho antigeno de muestra -> desplaza al marcado
-      msg('Ahora MUCHO Ag en la muestra: desplaza al marcado y la señal BAJA (relación inversa).');
-      marcados.forEach((b, i) => { if (i > 0) anim(b, 'position', `${xs[i]} ${h*0.9} 0.05`, 1000); });
-      xs.slice(1, 4).forEach(px => { const b = ball(root, `${px} ${h*0.9} 0.05`, 0.026, '#d62828'); anim(b, 'position', `${px} ${baseY + 0.115} 0.05`, 1300); });
+      txt(root, 'senal', `0.45 ${baseY - 0.05} 0.05`, 0.2, '#ffd60a');
+      await sleep(2400); if (comp.run !== id) return;
+      panel(T, 'Ahora MUCHO Ag en la muestra: desplaza al marcado y la señal BAJA (relación inversa).', btns);
+      marcados.forEach((b, i) => { if (i > 0) anim(b, 'position', `${xs[i]} ${h * 0.9} 0.05`, 1000); });
+      xs.slice(1, 4).forEach(px => { const b = ball(root, `${px} ${h * 0.9} 0.05`, 0.026, '#d62828'); anim(b, 'position', `${px} ${baseY + 0.115} 0.05`, 1300); });
       anim(barra, 'height', 0.08, 1200); anim(barra, 'position', `0.45 ${baseY + 0.06} 0.05`, 1200);
     })();
   }
 }
 
 /* =====================================================================
-   3) CURVA PATRON
+   2) CURVA PATRON
    ===================================================================== */
 const curva = { run: 0 };
 function montarCurva() {
-  const root = document.getElementById('escena-curva'); limpiar(root); const id = ++curva.run;
-  const h = H('curva');
-  const gW = 0.9, gH = h * 0.9, ox = -gW/2, oy = -gH/2;
-  panel('Curva patrón (análisis cuantitativo)', '1) Se miden patrones de concentración conocida y se dibuja la curva.', [['Repetir', montarCurva]]);
-  box(root, `0 ${oy} 0.02`, [gW, 0.012, 0.012], '#333');            // eje X
-  box(root, `${ox} 0 0.02`, [0.012, gH, 0.012], '#333');            // eje Y
-  el(root, 'a-text', { value:'concentracion', color:'#222', align:'center', width:0.5, position:`0 ${oy - 0.05} 0.02` });
-  el(root, 'a-text', { value:'senal', color:'#222', align:'center', width:0.3, position:`${ox - 0.05} ${gH*0.45} 0.02`, rotation:'0 0 90' });
-  const f = t => 1 - Math.exp(-3.2 * t);                              // saturacion
+  const root = $('escena-curva'); limpiar(root); const id = ++curva.run; root.setAttribute('position', '0 0.05 0');
+  const gW = 0.86, gH = 0.30, ox = -gW / 2, oy = -gH / 2 - 0.02;
+  const T = 'Curva patrón (análisis cuantitativo)', btn = [['Repetir', montarCurva]];
+  panel(T, '1) Se miden patrones de concentración conocida y se dibuja la curva.', btn);
+  box(root, `0 ${oy} 0.02`, [gW, 0.014, 0.014], '#e8e8e8');
+  box(root, `${ox} ${oy + gH / 2} 0.02`, [0.014, gH + 0.02, 0.014], '#e8e8e8');
+  txt(root, 'concentracion', `0 ${oy - 0.05} 0.02`, 0.4, '#cfd8e3');
+  txt(root, 'senal', `${ox - 0.05} ${oy + gH * 0.5} 0.02`, 0.16, '#cfd8e3', { rotation: '0 0 90' });
+  const f = t => 1 - Math.exp(-3.2 * t);
   const pts = [0.08, 0.22, 0.4, 0.6, 0.82].map(t => [ox + t * gW, oy + f(t) * gH]);
   (async () => {
     for (let i = 0; i < pts.length; i++) {
       if (curva.run !== id) return;
-      const p = ball(root, `${pts[i][0]} ${pts[i][1] + 0.3} 0.05`, 0.022, '#0b6e4f');
+      const p = ball(root, `${pts[i][0]} ${pts[i][1] + 0.3} 0.05`, 0.022, '#2ee6a6');
       anim(p, 'position', `${pts[i][0]} ${pts[i][1]} 0.05`, 500);
-      el(root, 'a-text', { value:'P' + (i+1), color:'#0b6e4f', width:0.25, position:`${pts[i][0]} ${pts[i][1] + 0.05} 0.05`, align:'center' });
+      txt(root, 'P' + (i + 1), `${pts[i][0]} ${pts[i][1] + 0.05} 0.05`, 0.12, '#2ee6a6');
       if (i > 0) {
-        const [x1, y1] = pts[i-1], [x2, y2] = pts[i];
-        const len = Math.hypot(x2 - x1, y2 - y1);
-        const ang = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
-        box(root, `${(x1+x2)/2} ${(y1+y2)/2} 0.04`, [len, 0.008, 0.008], '#0b6e4f', { rotation:`0 0 ${ang}` });
+        const [x1, y1] = pts[i - 1], [x2, y2] = pts[i];
+        box(root, `${(x1 + x2) / 2} ${(y1 + y2) / 2} 0.04`, [Math.hypot(x2 - x1, y2 - y1), 0.01, 0.01], '#2ee6a6', { rotation: `0 0 ${Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI}` });
       }
       await sleep(550);
     }
     if (curva.run !== id) return;
-    panel('Curva patrón (análisis cuantitativo)', '2) La muestra problema da una señal: se busca en la curva su concentración.', [['Repetir', montarCurva]]);
+    panel(T, '2) La muestra problema da una señal: se busca en la curva su concentración.', btn);
     const sy = oy + 0.62 * gH;
-    const m = ball(root, `${ox + 0.02} ${sy + 0.3} 0.06`, 0.03, '#d62828');
+    const m = ball(root, `${ox + 0.02} ${sy + 0.25} 0.06`, 0.028, '#ff5a5a');
     anim(m, 'position', `${ox + 0.02} ${sy} 0.06`, 900);
-    el(root, 'a-text', { value:'muestra', color:'#d62828', width:0.3, position:`${ox + 0.1} ${sy + 0.05} 0.06` });
+    txt(root, 'muestra', `${ox + 0.12} ${sy + 0.05} 0.06`, 0.2, '#ff8a8a');
     await sleep(1000); if (curva.run !== id) return;
-    // x donde f(t)=0.62 -> t = -ln(1-0.62)/3.2
     const tx = ox + (-Math.log(1 - 0.62) / 3.2) * gW;
     anim(m, 'position', `${tx} ${sy} 0.06`, 1100);
     await sleep(1200); if (curva.run !== id) return;
     anim(m, 'position', `${tx} ${oy} 0.06`, 1100);
-    el(root, 'a-text', { value:'[X] = concentracion de la muestra', color:'#d62828', width:0.55, align:'center', position:`${tx} ${oy - 0.1} 0.06` });
-    panel('Curva patrón (análisis cuantitativo)', '3) Se extrapola en la curva y se lee la concentración exacta. Ej: TSH, PSA, troponina.', [['Repetir', montarCurva]]);
+    txt(root, '[X] = concentracion de la muestra', `${tx} ${oy - 0.11} 0.06`, 0.6, '#ff8a8a');
+    panel(T, '3) Se extrapola en la curva y se lee la concentración exacta. Ej: TSH, PSA, troponina.', btn);
   })();
 }
 
 /* =====================================================================
-   4) DILUCIONES (semicuantitativo, titulacion)
+   3) DILUCIONES
    ===================================================================== */
 const dil = { run: 0 };
 function montarDil() {
-  const root = document.getElementById('escena-dil'); limpiar(root); const id = ++dil.run; root.setAttribute('scale', '0.65 0.65 0.65');
-  const h = H('dil');
-  panel('Titulación (semicuantitativo)', 'Dilución seriada del suero. El título es la mayor dilución que aún da reacción positiva.', [['Repetir', montarDil]]);
+  const root = $('escena-dil'); limpiar(root); const id = ++dil.run;
+  root.setAttribute('scale', '0.85 0.85 0.85'); root.setAttribute('position', '0 -0.03 0');
+  const T = 'Titulación (semicuantitativo)', btn = [['Repetir', montarDil]];
+  panel(T, 'Dilución seriada del suero. El título es la mayor dilución que aún da reacción positiva.', btn);
   const labels = ['1/10', '1/20', '1/40', '1/80', '1/160', '1/320'];
   const cols = ['#3a0ca3', '#4361ee', '#4895ef', '#7ab8f5', '#c9e4fb', '#f1f6fb'];
   const n = labels.length, sp = 0.16, x0 = -sp * (n - 1) / 2;
   const tubos = labels.map((l, i) => {
-    const t = el(root, 'a-entity', { position: `${x0 + i * sp} ${-h*0.05} 0.05` });
-    el(t, 'a-cylinder', { radius: 0.05, height: 0.30, color: '#e8f1f8', opacity: 0.35, 'open-ended': true, position: '0 0 0' });
+    const t = el(root, 'a-entity', { position: `${x0 + i * sp} -0.02 0.05` });
+    el(t, 'a-cylinder', { radius: 0.05, height: 0.30, color: '#e8f1f8', opacity: 0.35, 'open-ended': true });
     const liq = el(t, 'a-cylinder', { radius: 0.045, height: 0.0, color: cols[i], position: '0 -0.15 0' });
-    el(t, 'a-text', { value: l, color: '#fff', width:0.35, align: 'center', position: '0 -0.23 0' });
-    return { liq, i };
+    txt(t, l, '0 -0.23 0', 0.15);
+    return { liq, t };
   });
   (async () => {
     for (const t of tubos) {
       if (dil.run !== id) return;
-      anim(t.liq, 'height', 0.22, 500); anim(t.liq, 'position', `0 ${-0.15 + 0.11} 0`, 500);
+      anim(t.liq, 'height', 0.22, 500); anim(t.liq, 'position', '0 -0.04 0', 500);
       await sleep(300);
     }
     await sleep(900); if (dil.run !== id) return;
-    // el 5.º y 6.º ya no dan reaccion positiva: marcamos 4.º como titulo
-    const pos = tubos.slice(0, 4);
-    pos.forEach(t => { const s = ball(t.liq.parentNode, '0 0.22 0', 0.0, '#ffd60a'); anim(s, 'radius', 0.022, 500); });
-    const marca = el(root, 'a-text', { value: 'TITULO = 80  (1/80)', color: '#ffd60a', width:0.45, align: 'center', position: `${x0 + 3*sp} ${h*0.62} 0.06` });
-    panel('Titulación (semicuantitativo)', 'Positivos hasta 1/80 → título 80. Más título = más anticuerpos. 1/160 y 1/320 ya no reaccionan.', [['Repetir', montarDil]]);
+    tubos.slice(0, 4).forEach(t => { const s = ball(t.t, '0 0.21 0', 0.0, '#ffd60a'); anim(s, 'radius', 0.022, 500); });
+    txt(root, 'TITULO = 80  (1/80)', `${x0 + 3 * sp} 0.21 0.06`, 0.5, '#ffd60a');
+    panel(T, 'Positivos hasta 1/80 → título 80. Más título = más anticuerpos. 1/160 y 1/320 ya no reaccionan.', btn);
   })();
 }
 
 /* =====================================================================
-   5) MARCADORES (enzima + sustrato, fluorocromo, radioisotopo, oro)
+   4) MARCADORES
    ===================================================================== */
 const marc = { run: 0 };
 function montarMarc() {
-  const root = document.getElementById('escena-marc'); limpiar(root); const id = ++marc.run; root.setAttribute('scale', '0.6 0.6 0.6');
-  const h = H('marc');
-  panel('Marcadores', 'Enzima + sustrato → producto con color (amplifica la señal).', [['Repetir', montarMarc]]);
-  // vaso con liquido que cambia de color
-  const vaso = el(root, 'a-entity', { position: `-0.25 ${-h*0.1} 0.08` });
+  const root = $('escena-marc'); limpiar(root); const id = ++marc.run;
+  root.setAttribute('scale', '0.8 0.8 0.8');
+  const T = 'Marcadores', btn = [['Repetir', montarMarc]];
+  panel(T, 'Enzima + sustrato → producto con color (amplifica la señal).', btn);
+  const vaso = el(root, 'a-entity', { position: '-0.28 -0.02 0.08' });
   el(vaso, 'a-cylinder', { radius: 0.11, height: 0.30, color: '#e8f1f8', opacity: 0.3, 'open-ended': true });
   const liq = el(vaso, 'a-cylinder', { radius: 0.10, height: 0.22, color: '#f1f1f1', position: '0 -0.04 0' });
-  const enz = ball(root, `-0.25 ${h*0.9} 0.08`, 0.04, '#f77f00');   // enzima (naranja)
-  const sus = ball(root, `-0.20 ${h*0.9} 0.08`, 0.025, '#3b8bff');   // sustrato (azul)
-  // otros marcadores como iconos giratorios
-  const fluo = el(root, 'a-entity', { position: `0.10 ${-h*0.05} 0.1` });
-  el(fluo, 'a-icosahedron', { radius: 0.07, color: '#2dc653', material: 'emissive: #2dc653; emissiveIntensity: 0.5', animation: 'property: rotation; to: 0 360 0; dur: 5000; loop: true; easing: linear' });
-  el(fluo, 'a-text', { value: 'Fluorocromo', color: '#fff', width:0.26, align: 'center', position: '0 -0.14 0' });
-  const rad = el(root, 'a-entity', { position: `0.28 ${-h*0.05} 0.1` });
-  el(rad, 'a-torus', { radius: 0.05, 'radius-tubular': 0.02, color: '#f2cc0c', animation: 'property: rotation; to: 0 360 0; dur: 3000; loop: true; easing: linear' });
-  el(rad, 'a-text', { value: 'Radioisotopo', color: '#fff', width:0.26, align: 'center', position: '0 -0.14 0' });
-  const oro = el(root, 'a-entity', { position: `0.45 ${-h*0.05} 0.1` });
-  for (let i = 0; i < 6; i++) ball(oro, `${(Math.random()-0.5)*0.08} ${(Math.random()-0.5)*0.08} ${(Math.random()-0.5)*0.05}`, 0.018, '#d62828');
-  el(oro, 'a-text', { value: 'Oro coloidal', color: '#fff', width:0.26, align: 'center', position: '0 -0.14 0' });
+  txt(root, 'Enzima + sustrato', '-0.28 -0.22 0.08', 0.4);
+  const enz = ball(root, '-0.28 0.3 0.08', 0.04, '#f77f00');
+  const sus = ball(root, '-0.22 0.3 0.08', 0.025, '#3b8bff');
+  const fluo = el(root, 'a-entity', { position: '0.06 0.02 0.1' });
+  el(fluo, 'a-icosahedron', { radius: 0.06, color: '#2dc653', material: 'emissive: #2dc653; emissiveIntensity: 0.5', animation: 'property: rotation; to: 0 360 0; dur: 5000; loop: true; easing: linear' });
+  txt(fluo, 'Fluorocromo', '0 -0.12 0', 0.24);
+  const rad = el(root, 'a-entity', { position: '0.24 0.02 0.1' });
+  el(rad, 'a-torus', { radius: 0.045, 'radius-tubular': 0.015, color: '#f2cc0c', animation: 'property: rotation; to: 0 360 0; dur: 3000; loop: true; easing: linear' });
+  txt(rad, 'Radioisotopo', '0 -0.12 0', 0.24);
+  const oro = el(root, 'a-entity', { position: '0.42 0.02 0.1' });
+  for (let i = 0; i < 6; i++) ball(oro, `${(Math.random() - 0.5) * 0.08} ${(Math.random() - 0.5) * 0.08} ${(Math.random() - 0.5) * 0.05}`, 0.016, '#d62828');
+  txt(oro, 'Oro coloidal', '0 -0.12 0', 0.24);
   (async () => {
-    anim(enz, 'position', `-0.25 ${-h*0.02} 0.08`, 900); anim(sus, 'position', `-0.19 ${-h*0.02} 0.08`, 900);
+    anim(enz, 'position', '-0.28 0.0 0.08', 900); anim(sus, 'position', '-0.22 0.0 0.08', 900);
     await sleep(1400); if (marc.run !== id) return;
     anim(sus, 'radius', 0.0, 500);
     liq.setAttribute('animation__col', { property: 'material.color', type: 'color', to: '#1e6fff', dur: 1800, easing: 'linear' });
   })();
 }
 
-/* ---------- eventos de deteccion ---------- */
-const escenas = {
-  t0: () => { tira.modo = 'nocomp'; lanzarTira('nocomp_pos'); },
-  t1: () => montarComp('sand'),
-  t2: () => montarCurva(),
-  t3: () => montarDil(),
-  t4: () => montarMarc(),
+/* =====================================================================
+   5) TIRA INMUNOCROMATOGRAFICA (rediseno)
+   ===================================================================== */
+const tira = { run: 0, modo: 'nocomp' };
+const RESULTADOS_TIRA = {
+  nocomp_pos: { T: 1, C: 1, titulo: 'No competitiva · POSITIVO', texto: 'Hay analito: se forma el complejo y se capta en T. El exceso de conjugado se capta en C. Bandas T y C.' },
+  nocomp_neg: { T: 0, C: 1, titulo: 'No competitiva · NEGATIVO', texto: 'Sin analito no se forma el complejo en T. Solo se ve la banda de control C.' },
+  nocomp_inv: { T: 0, C: 0, titulo: 'No competitiva · INVÁLIDO', texto: 'Sin banda C el test no es válido (aunque aparezca T). Hay que repetirlo.' },
+  comp_pos:   { T: 0, C: 1, titulo: 'Competitiva · POSITIVO', texto: 'El Ag de la muestra compite con el Ag fijado en T por el Ac marcado: T desaparece. Solo C.' },
+  comp_neg:   { T: 1, C: 1, titulo: 'Competitiva · NEGATIVO', texto: 'Sin Ag en la muestra, el Ac marcado se une al Ag fijado en T: aparecen T y C.' },
+  comp_inv:   { T: 0, C: 0, titulo: 'Competitiva · INVÁLIDO', texto: 'Sin banda C el test no es válido.' },
 };
-document.addEventListener('DOMContentLoaded', () => {
-  const sceneEl = document.querySelector('a-scene');
-  sceneEl.addEventListener('arReady', () => { document.getElementById('loading').style.display = 'none'; });
-  sceneEl.addEventListener('arError', () => {
-    document.getElementById('loading').innerHTML = 'No se pudo abrir la cámara.<br>Abre el enlace en Chrome o Safari y acepta el permiso.<br><br>Puedes usar «Ver sin cámara» arriba a la derecha.';
-  });
-  Object.keys(escenas).forEach(k => {
-    const t = document.getElementById(k);
-    t.addEventListener('targetFound', () => escenas[k]());
-    t.addEventListener('targetLost', () => {
-      Object.keys(escenas).forEach(o => { /* paramos las animaciones al perder el esquema */ });
-      tira.run++; comp.run++; curva.run++; dil.run++; marc.run++;
-      document.getElementById('hint').style.display = '';
-      ui.t.textContent = ''; ui.x.textContent = ''; ui.b.innerHTML = '';
-    });
-  });
-});
+function botonesTira() {
+  const m = tira.modo;
+  return [
+    ['Positivo', () => lanzarTira(m + '_pos')], ['Negativo', () => lanzarTira(m + '_neg')], ['Inválido', () => lanzarTira(m + '_inv')],
+    [m === 'nocomp' ? 'Ver competitiva' : 'Ver no competitiva', () => { tira.modo = m === 'nocomp' ? 'comp' : 'nocomp'; lanzarTira(tira.modo + '_pos'); }],
+  ];
+}
+function lanzarTira(k) { const r = RESULTADOS_TIRA[k]; panel(r.titulo, 'La muestra avanza por capilaridad…', botonesTira()); montarTira(r); }
+
+function montarTira(res) {
+  const root = $('escena-tira'); limpiar(root); const id = ++tira.run;
+  const X = { sam: -0.38, conj: -0.22, T: 0.10, C: 0.26, abs: 0.44 };
+  root.setAttribute('scale', '0.95 0.95 0.95');
+  // etiquetas (sin inclinar, siempre legibles)
+  txt(root, 'Siembra', '-0.40 0.20 0.06', 0.22);
+  txt(root, 'Conjugado', '-0.19 0.20 0.06', 0.26, '#ffd98a');
+  txt(root, 'T', `${X.T} 0.20 0.06`, 0.09, '#ff8a8a');
+  txt(root, 'C', `${X.C} 0.20 0.06`, 0.09, '#ff8a8a');
+  txt(root, 'Absorbente', '0.44 0.20 0.06', 0.22);
+  txt(root, 'Ac marcado (oro)', '-0.22 -0.13 0.06', 0.30, '#ffd98a');
+  txt(root, 'T: Ac2', '0.08 -0.13 0.06', 0.13, '#ff8a8a');
+  txt(root, 'C: Ac3 anti-conj.', '0.34 -0.13 0.06', 0.32, '#ff8a8a');
+  // flecha de flujo
+  box(root, '-0.02 -0.205 0.05', [0.44, 0.012, 0.012], '#ff6b6b');
+  el(root, 'a-cone', { position: '0.22 -0.205 0.05', rotation: '0 0 -90', 'radius-bottom': 0.026, 'radius-top': 0, height: 0.06, color: '#ff6b6b' });
+  txt(root, 'FLUJO', '-0.37 -0.205 0.06', 0.14, '#ff8a8a');
+  // tira inclinada
+  const base = el(root, 'a-entity', { position: '0 -0.015 0.02', rotation: '-38 0 0' });
+  box(base, '0 0 0', [1.0, 0.15, 0.012], '#e9e4d6');
+  box(base, `${X.sam} 0 0.016`, [0.16, 0.13, 0.02], '#d6ebff');
+  box(base, `${X.conj} 0 0.016`, [0.16, 0.13, 0.02], '#f4dc8f');
+  box(base, '0.12 0 0.010', [0.52, 0.13, 0.008], '#fbf7ec');
+  box(base, `${X.abs} 0 0.016`, [0.12, 0.13, 0.02], '#b9bfc7');
+  const linea = x => el(base, 'a-box', { position: `${x} 0 0.017`, width: 0.018, height: 0.12, depth: 0.004, material: 'color:#e0243a; opacity:0; transparent:true' });
+  const lT = linea(X.T), lC = linea(X.C);
+  const fl = el(base, 'a-box', { position: '-0.46 0 0.02', width: 1, height: 0.126, depth: 0.04, material: 'color:#2f80ff; opacity:0.4; transparent:true', scale: '0.0001 1 1' });
+  const crecer = (len, dur) => { anim(fl, 'scale', `${len} 1 1`, dur, { easing: 'linear' }); anim(fl, 'position', `${-0.46 + len / 2} 0 0.02`, dur, { easing: 'linear' }); };
+  const gota = ball(root, `${X.sam} 0.22 0.10`, 0.028, '#3b8bff');
+  anim(gota, 'position', `${X.sam} 0.03 0.06`, 800, { easing: 'easeInQuad' });
+  (async () => {
+    await sleep(850); if (tira.run !== id) return;
+    root.removeChild(gota);
+    crecer(0.32, 900);
+    await sleep(950); if (tira.run !== id) return;
+    const dest = i => (res.T && i < 6) ? 'T' : (res.C && i < 10) ? 'C' : 'abs';
+    const destX = { T: X.T, C: X.C, abs: X.abs - 0.02 };
+    const durD = { T: 1300, C: 2200, abs: 3100 };
+    for (let i = 0; i < 13; i++) {
+      const d = dest(i), yy = ((i % 6) - 2.5) * 0.02;
+      const p = ball(base, `${X.conj - 0.02 + (i % 3) * 0.015} ${yy} 0.04`, 0.011, '#c8961e', { material: 'color:#c8961e; emissive:#6b4a00; emissiveIntensity:0.4' });
+      anim(p, 'position', `${destX[d] + ((i % 3) - 1) * 0.004} ${yy} 0.04`, durD[d] + i * 40, { easing: 'linear' });
+    }
+    crecer(0.56, 1300);
+    await sleep(1350); if (tira.run !== id) return;
+    if (res.T) anim(lT, 'material.opacity', 1, 500);
+    crecer(0.72, 900);
+    await sleep(950); if (tira.run !== id) return;
+    if (res.C) anim(lC, 'material.opacity', 1, 500);
+    crecer(0.96, 900);
+    await sleep(1300); if (tira.run !== id) return;
+    panel(res.titulo, res.texto, botonesTira());
+  })();
+}
 
 /* =====================================================================
-   MODO DEMO (sin camara): muestra las escenas delante, se giran con el dedo
+   NAVEGACION
    ===================================================================== */
-const demo = { on: false, yaw: 0, pitch: 0, drag: null, cur: null };
-const NOMBRES = { t0: 'Tira', t1: 'Competitivo', t2: 'Curva patrón', t3: 'Diluciones', t4: 'Marcadores' };
+const ESC = { comp: () => montarComp('sand'), curva: montarCurva, dil: montarDil, marc: montarMarc, tira: () => { tira.modo = 'nocomp'; lanzarTira('nocomp_pos'); } };
+let idx = -1;
+function ir(i) {
+  idx = (i + SEQ.length) % SEQ.length; const k = SEQ[idx];
+  tira.run++; comp.run++; curva.run++; dil.run++; marc.run++;
+  ['tira', 'comp', 'curva', 'dil', 'marc'].forEach(n => limpiar($('escena-' + n)));
+  colocar(k); ESC[k]();
+  $('navtxt').textContent = (idx + 1) + '/' + SEQ.length + ' · ' + NOM[k];
+  document.querySelectorAll('#chips button').forEach(b => b.classList.toggle('on', +b.dataset.i === idx));
+}
+function mostrarNav() {
+  $('nav').style.display = 'flex'; $('hint').style.display = 'none';
+  const ch = $('chips');
+  if (!ch.firstChild) SEQ.forEach((k, i) => {
+    const b = document.createElement('button'); b.textContent = (i + 1) + ' ' + NOM[k].split(' ')[0]; b.dataset.i = i;
+    b.onclick = () => ir(i); ch.appendChild(b);
+  });
+  ch.style.display = 'flex';
+}
+$('prev').onclick = () => ir(idx - 1);
+$('next').onclick = () => ir(idx + 1);
+
+/* =====================================================================
+   MODO DEMO (sin camara): la foto de la hoja flota delante y se gira con el dedo
+   ===================================================================== */
+const demo = { on: false, yaw: 0, pitch: 0, drag: null };
 function colocarDemo() {
-  const t = document.getElementById(demo.cur).object3D;
+  const t = $('hoja-target').object3D;
   const asp = innerWidth / innerHeight;
   const hfov = 2 * Math.atan(Math.tan(40 * Math.PI / 180) * asp);
-  const dist0 = 1.1 / (2 * Math.tan(hfov / 2)), dist = Math.max(0.8, dist0), esc = Math.min(1.6, Math.max(1, 0.8 / dist0));
+  const dist = Math.max(0.62, 1.02 / (2 * Math.tan(hfov / 2)));
   const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(demo.pitch, demo.yaw, 0, 'YXZ'));
   t.matrixAutoUpdate = false;
-  t.matrix.compose(new THREE.Vector3(0, 0.12, -dist), q, new THREE.Vector3(esc, esc, esc));
-  t.matrixWorldNeedsUpdate = true;
-  t.visible = true;
-}
-function verEscenaDemo(k) {
-  tira.run++; comp.run++; curva.run++; dil.run++; marc.run++;
-  Object.keys(escenas).forEach(o => { document.getElementById(o).object3D.visible = false; });
-  demo.cur = k; demo.yaw = 0; demo.pitch = 0;
-  colocarDemo(); escenas[k]();
-  document.querySelectorAll('#chips button').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+  t.matrix.compose(new THREE.Vector3(0, 0.1, -dist), q, new THREE.Vector3(1, 1, 1));
+  t.matrixWorldNeedsUpdate = true; t.visible = true;
 }
 function activarDemo() {
-  if (demo.on) { location.reload(); return; }            // segunda pulsacion: volver a la camara
+  if (demo.on) { location.reload(); return; }
   demo.on = true;
   try { document.querySelector('a-scene').systems['mindar-image-system'].stop(); } catch (e) {}
   document.querySelectorAll('video').forEach(v => v.style.display = 'none');
   document.body.style.background = 'linear-gradient(#10213a, #274b78)';
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('hint').style.display = 'none';
-  document.getElementById('demoBtn').textContent = 'Volver a la cámara';
-  const chips = document.getElementById('chips'); chips.style.display = 'flex'; chips.innerHTML = '';
-  Object.keys(NOMBRES).forEach(k => {
-    const b = document.createElement('button'); b.textContent = NOMBRES[k]; b.dataset.k = k;
-    b.onclick = () => verEscenaDemo(k); chips.appendChild(b);
-  });
-  const cv = document.querySelector('canvas.a-canvas') || document.querySelector('canvas');
+  $('loading').style.display = 'none'; $('hint').style.display = 'none';
+  $('demoBtn').textContent = 'Volver a la cámara';
+  $('hoja-img').setAttribute('visible', true);
+  mostrarNav(); colocarDemo(); ir(idx < 0 ? 0 : idx);
   const dn = e => { if (e.target.closest('button')) return; demo.drag = [e.clientX, e.clientY]; };
   const mv = e => { if (!demo.drag) return;
-    demo.yaw += (e.clientX - demo.drag[0]) * 0.008; demo.pitch += (e.clientY - demo.drag[1]) * 0.008;
-    demo.pitch = Math.max(-1.3, Math.min(0.5, demo.pitch)); demo.drag = [e.clientX, e.clientY]; colocarDemo(); };
-  const up = () => { demo.drag = null; };
-  window.addEventListener('pointerdown', dn); window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
-  verEscenaDemo('t0');
+    demo.yaw = clamp(demo.yaw + (e.clientX - demo.drag[0]) * 0.006, -0.9, 0.9);
+    demo.pitch = clamp(demo.pitch + (e.clientY - demo.drag[1]) * 0.006, -0.9, 0.5);
+    demo.drag = [e.clientX, e.clientY]; colocarDemo(); };
+  window.addEventListener('pointerdown', dn); window.addEventListener('pointermove', mv); window.addEventListener('pointerup', () => { demo.drag = null; });
 }
-document.getElementById('demoBtn').addEventListener('click', activarDemo);
+$('demoBtn').addEventListener('click', activarDemo);
+
+/* ---------- eventos de la camara ---------- */
+document.addEventListener('DOMContentLoaded', () => {
+  const sc = document.querySelector('a-scene');
+  sc.addEventListener('arReady', () => { $('loading').style.display = 'none'; });
+  sc.addEventListener('arError', () => {
+    $('loading').innerHTML = 'No se pudo abrir la cámara.<br>Abre el enlace en Chrome o Safari y acepta el permiso.<br><br>Puedes usar «Ver sin cámara» arriba a la derecha.';
+  });
+  const t = $('hoja-target');
+  t.addEventListener('targetFound', () => {
+    if (demo.on) return;
+    $('hint').style.display = 'none'; mostrarNav();
+    if (idx < 0) ir(0);
+  });
+  t.addEventListener('targetLost', () => {
+    if (demo.on) return;
+    $('hint').textContent = 'Se perdió la hoja: enfócala de nuevo.'; $('hint').style.display = '';
+  });
+});
 </script>
 </body>
 </html>
