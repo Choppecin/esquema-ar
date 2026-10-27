@@ -20,9 +20,18 @@
           font-size:14px; text-shadow:0 1px 4px #000; pointer-events:none; padding:0 16px; }
   #loading { position:fixed; inset:0; z-index:20; background:#10213a; color:#fff; display:flex;
              align-items:center; justify-content:center; text-align:center; padding:24px; font-size:17px; }
+  #demoBtn { position:fixed; top:10px; right:10px; z-index:40; border:0; border-radius:20px; padding:9px 14px;
+             font-size:14px; font-weight:700; background:#ffd60a; color:#222; box-shadow:0 2px 8px rgba(0,0,0,.4); }
+  #chips { position:fixed; top:56px; left:0; right:0; z-index:30; display:none; justify-content:center;
+           gap:6px; flex-wrap:wrap; padding:0 10px; }
+  #chips button { border:0; border-radius:16px; padding:7px 12px; font-size:13px; font-weight:600;
+                  background:rgba(255,255,255,.85); color:#222; }
+  #chips button.on { background:#ffd60a; }
 </style>
 </head>
 <body>
+<button id="demoBtn">Ver sin cámara</button>
+<div id="chips"></div>
 <div id="loading">Cargando realidad aumentada…<br>Acepta el permiso de la cámara.</div>
 <div id="hint">Enfoca una zona del esquema: tira, curva, diluciones, competitivo o marcadores.</div>
 <div id="ui">
@@ -100,10 +109,10 @@ function montarTira(res) {
   const lineaT = box(base, `${x.T} 0 0.027`, [0.014, h*0.55, 0.004], '#d93a3a', { opacity: 0 });
   const lineaC = box(base, `${x.C} 0 0.027`, [0.014, h*0.55, 0.004], '#d93a3a', { opacity: 0 });
   // etiquetas
-  const lab = (t, px) => el(base, 'a-text', { value:t, align:'center', color:'#fff', width:0.9, position:`${px} ${h*0.40} 0.03`, 'wrap-count':14 });
+  const lab = (t, px) => el(base, 'a-text', { value:t, align:'center', color:'#fff', width:0.3, position:`${px} ${h*0.50} 0.03`, 'wrap-count':14 });
   lab('Siembra', x.siembra); lab('Conjugado', x.conj); lab('T', x.T); lab('C', x.C); lab('Absorb.', x.abs);
   // flecha de flujo
-  el(base, 'a-text', { value:'FLUJO →', align:'center', color:'#ff8080', width:1.2, position:`0 ${-h*0.38} 0.03` });
+  el(base, 'a-text', { value:'FLUJO >', align:'center', color:'#ff8080', width:0.4, position:`0 ${-h*0.38} 0.03` });
 
   // gota que cae
   const gota = ball(root, `${x.siembra} ${h*0.9} 0.12`, 0.04, '#3b8bff');
@@ -115,7 +124,7 @@ function montarTira(res) {
     // particulas de oro que avanzan con la muestra
     const n = 9, parts = [];
     for (let i = 0; i < n; i++) {
-      const p = ball(base, `${x.conj} ${(i%3-1)*h*0.13} 0.06`, 0.025, '#d4a017');
+      const p = ball(base, `${x.conj} ${(i%3-1)*h*0.13} 0.06`, 0.018, '#d4a017');
       parts.push(p);
     }
     const llegaT = res.T, llegaC = res.C;
@@ -164,7 +173,7 @@ function anticuerpo(parent, pos, color, rot = '0 0 0', s = 1) {
   return g;
 }
 function montarComp(tipo) {
-  const root = document.getElementById('escena-comp'); limpiar(root); const id = ++comp.run;
+  const root = document.getElementById('escena-comp'); limpiar(root); const id = ++comp.run; root.setAttribute('scale', '0.65 0.65 0.65'); root.setAttribute('position', '0 0.06 0');
   const h = H('comp'); const baseY = -h * 0.30;
   box(root, `0 ${baseY} 0.01`, [0.85, 0.02, 0.2], '#8aa0b8');   // pocillo / superficie
   if (tipo === 'sand') {
@@ -179,7 +188,7 @@ function montarComp(tipo) {
       panel('No competitivo (sándwich)', 'Se añade el anticuerpo marcado, que se pega encima del antígeno.', [['Repetir', () => montarComp('sand')], ['Ver competitivo', () => montarComp('comp')]]);
       const labs = xs.map(px => { const g = anticuerpo(root, `${px} ${h*0.9} 0.05`, '#f4a261', '180 0 0'); anim(g, 'position', `${px} ${baseY + 0.20} 0.05`, 1400); return g; });
       await sleep(1900); if (comp.run !== id) return;
-      xs.forEach(px => { const s = ball(root, `${px} ${baseY + 0.27} 0.05`, 0.0, '#ffd60a', { material: 'shader: flat; color: #ffd60a' }); anim(s, 'radius', 0.035, 700); });
+      xs.forEach(px => { const s = ball(root, `${px} ${baseY + 0.27} 0.05`, 0.0, '#ffd60a', { material: 'shader: flat; color: #ffd60a' }); anim(s, 'radius', 0.022, 700); });
       panel('No competitivo (sándwich)', 'Se enciende la señal: MÁS señal = MÁS antígeno en la muestra (relación directa).', [['Repetir', () => montarComp('sand')], ['Ver competitivo', () => montarComp('comp')]]);
     })();
   } else {
@@ -216,8 +225,8 @@ function montarCurva() {
   panel('Curva patrón (análisis cuantitativo)', '1) Se miden patrones de concentración conocida y se dibuja la curva.', [['Repetir', montarCurva]]);
   box(root, `0 ${oy} 0.02`, [gW, 0.012, 0.012], '#333');            // eje X
   box(root, `${ox} 0 0.02`, [0.012, gH, 0.012], '#333');            // eje Y
-  el(root, 'a-text', { value:'concentración', color:'#222', align:'center', width:1, position:`0 ${oy - 0.05} 0.02` });
-  el(root, 'a-text', { value:'señal', color:'#222', align:'center', width:1, position:`${ox - 0.05} ${gH*0.45} 0.02`, rotation:'0 0 90' });
+  el(root, 'a-text', { value:'concentracion', color:'#222', align:'center', width:0.5, position:`0 ${oy - 0.05} 0.02` });
+  el(root, 'a-text', { value:'senal', color:'#222', align:'center', width:0.3, position:`${ox - 0.05} ${gH*0.45} 0.02`, rotation:'0 0 90' });
   const f = t => 1 - Math.exp(-3.2 * t);                              // saturacion
   const pts = [0.08, 0.22, 0.4, 0.6, 0.82].map(t => [ox + t * gW, oy + f(t) * gH]);
   (async () => {
@@ -225,7 +234,7 @@ function montarCurva() {
       if (curva.run !== id) return;
       const p = ball(root, `${pts[i][0]} ${pts[i][1] + 0.3} 0.05`, 0.022, '#0b6e4f');
       anim(p, 'position', `${pts[i][0]} ${pts[i][1]} 0.05`, 500);
-      el(root, 'a-text', { value:'P' + (i+1), color:'#0b6e4f', width:0.7, position:`${pts[i][0]} ${pts[i][1] + 0.05} 0.05`, align:'center' });
+      el(root, 'a-text', { value:'P' + (i+1), color:'#0b6e4f', width:0.25, position:`${pts[i][0]} ${pts[i][1] + 0.05} 0.05`, align:'center' });
       if (i > 0) {
         const [x1, y1] = pts[i-1], [x2, y2] = pts[i];
         const len = Math.hypot(x2 - x1, y2 - y1);
@@ -239,14 +248,14 @@ function montarCurva() {
     const sy = oy + 0.62 * gH;
     const m = ball(root, `${ox + 0.02} ${sy + 0.3} 0.06`, 0.03, '#d62828');
     anim(m, 'position', `${ox + 0.02} ${sy} 0.06`, 900);
-    el(root, 'a-text', { value:'muestra', color:'#d62828', width:0.7, position:`${ox + 0.1} ${sy + 0.05} 0.06` });
+    el(root, 'a-text', { value:'muestra', color:'#d62828', width:0.3, position:`${ox + 0.1} ${sy + 0.05} 0.06` });
     await sleep(1000); if (curva.run !== id) return;
     // x donde f(t)=0.62 -> t = -ln(1-0.62)/3.2
     const tx = ox + (-Math.log(1 - 0.62) / 3.2) * gW;
     anim(m, 'position', `${tx} ${sy} 0.06`, 1100);
     await sleep(1200); if (curva.run !== id) return;
     anim(m, 'position', `${tx} ${oy} 0.06`, 1100);
-    el(root, 'a-text', { value:'[X] = concentración de la muestra', color:'#d62828', width:1, align:'center', position:`${tx} ${oy - 0.1} 0.06` });
+    el(root, 'a-text', { value:'[X] = concentracion de la muestra', color:'#d62828', width:0.55, align:'center', position:`${tx} ${oy - 0.1} 0.06` });
     panel('Curva patrón (análisis cuantitativo)', '3) Se extrapola en la curva y se lee la concentración exacta. Ej: TSH, PSA, troponina.', [['Repetir', montarCurva]]);
   })();
 }
@@ -256,7 +265,7 @@ function montarCurva() {
    ===================================================================== */
 const dil = { run: 0 };
 function montarDil() {
-  const root = document.getElementById('escena-dil'); limpiar(root); const id = ++dil.run;
+  const root = document.getElementById('escena-dil'); limpiar(root); const id = ++dil.run; root.setAttribute('scale', '0.65 0.65 0.65');
   const h = H('dil');
   panel('Titulación (semicuantitativo)', 'Dilución seriada del suero. El título es la mayor dilución que aún da reacción positiva.', [['Repetir', montarDil]]);
   const labels = ['1/10', '1/20', '1/40', '1/80', '1/160', '1/320'];
@@ -266,7 +275,7 @@ function montarDil() {
     const t = el(root, 'a-entity', { position: `${x0 + i * sp} ${-h*0.05} 0.05` });
     el(t, 'a-cylinder', { radius: 0.05, height: 0.30, color: '#e8f1f8', opacity: 0.35, 'open-ended': true, position: '0 0 0' });
     const liq = el(t, 'a-cylinder', { radius: 0.045, height: 0.0, color: cols[i], position: '0 -0.15 0' });
-    el(t, 'a-text', { value: l, color: '#fff', width: 0.7, align: 'center', position: '0 -0.23 0' });
+    el(t, 'a-text', { value: l, color: '#fff', width:0.35, align: 'center', position: '0 -0.23 0' });
     return { liq, i };
   });
   (async () => {
@@ -278,8 +287,8 @@ function montarDil() {
     await sleep(900); if (dil.run !== id) return;
     // el 5.º y 6.º ya no dan reaccion positiva: marcamos 4.º como titulo
     const pos = tubos.slice(0, 4);
-    pos.forEach(t => { const s = ball(t.liq.parentNode, '0 0.22 0', 0.0, '#ffd60a'); anim(s, 'radius', 0.03, 500); });
-    const marca = el(root, 'a-text', { value: 'TÍTULO = 80  (1/80)', color: '#ffd60a', width: 1.1, align: 'center', position: `${x0 + 3*sp} ${h*0.40} 0.06` });
+    pos.forEach(t => { const s = ball(t.liq.parentNode, '0 0.22 0', 0.0, '#ffd60a'); anim(s, 'radius', 0.022, 500); });
+    const marca = el(root, 'a-text', { value: 'TITULO = 80  (1/80)', color: '#ffd60a', width:0.45, align: 'center', position: `${x0 + 3*sp} ${h*0.62} 0.06` });
     panel('Titulación (semicuantitativo)', 'Positivos hasta 1/80 → título 80. Más título = más anticuerpos. 1/160 y 1/320 ya no reaccionan.', [['Repetir', montarDil]]);
   })();
 }
@@ -289,7 +298,7 @@ function montarDil() {
    ===================================================================== */
 const marc = { run: 0 };
 function montarMarc() {
-  const root = document.getElementById('escena-marc'); limpiar(root); const id = ++marc.run;
+  const root = document.getElementById('escena-marc'); limpiar(root); const id = ++marc.run; root.setAttribute('scale', '0.6 0.6 0.6');
   const h = H('marc');
   panel('Marcadores', 'Enzima + sustrato → producto con color (amplifica la señal).', [['Repetir', montarMarc]]);
   // vaso con liquido que cambia de color
@@ -301,13 +310,13 @@ function montarMarc() {
   // otros marcadores como iconos giratorios
   const fluo = el(root, 'a-entity', { position: `0.10 ${-h*0.05} 0.1` });
   el(fluo, 'a-icosahedron', { radius: 0.07, color: '#2dc653', material: 'emissive: #2dc653; emissiveIntensity: 0.5', animation: 'property: rotation; to: 0 360 0; dur: 5000; loop: true; easing: linear' });
-  el(fluo, 'a-text', { value: 'Fluorocromo', color: '#fff', width: 0.7, align: 'center', position: '0 -0.14 0' });
+  el(fluo, 'a-text', { value: 'Fluorocromo', color: '#fff', width:0.26, align: 'center', position: '0 -0.14 0' });
   const rad = el(root, 'a-entity', { position: `0.28 ${-h*0.05} 0.1` });
   el(rad, 'a-torus', { radius: 0.05, 'radius-tubular': 0.02, color: '#f2cc0c', animation: 'property: rotation; to: 0 360 0; dur: 3000; loop: true; easing: linear' });
-  el(rad, 'a-text', { value: 'Radioisótopo', color: '#fff', width: 0.7, align: 'center', position: '0 -0.14 0' });
+  el(rad, 'a-text', { value: 'Radioisotopo', color: '#fff', width:0.26, align: 'center', position: '0 -0.14 0' });
   const oro = el(root, 'a-entity', { position: `0.45 ${-h*0.05} 0.1` });
   for (let i = 0; i < 6; i++) ball(oro, `${(Math.random()-0.5)*0.08} ${(Math.random()-0.5)*0.08} ${(Math.random()-0.5)*0.05}`, 0.018, '#d62828');
-  el(oro, 'a-text', { value: 'Oro coloidal', color: '#fff', width: 0.7, align: 'center', position: '0 -0.14 0' });
+  el(oro, 'a-text', { value: 'Oro coloidal', color: '#fff', width:0.26, align: 'center', position: '0 -0.14 0' });
   (async () => {
     anim(enz, 'position', `-0.25 ${-h*0.02} 0.08`, 900); anim(sus, 'position', `-0.19 ${-h*0.02} 0.08`, 900);
     await sleep(1400); if (marc.run !== id) return;
@@ -328,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const sceneEl = document.querySelector('a-scene');
   sceneEl.addEventListener('arReady', () => { document.getElementById('loading').style.display = 'none'; });
   sceneEl.addEventListener('arError', () => {
-    document.getElementById('loading').innerHTML = 'No se pudo abrir la cámara.<br>Abre el enlace en Chrome o Safari y acepta el permiso.';
+    document.getElementById('loading').innerHTML = 'No se pudo abrir la cámara.<br>Abre el enlace en Chrome o Safari y acepta el permiso.<br><br>Puedes usar «Ver sin cámara» arriba a la derecha.';
   });
   Object.keys(escenas).forEach(k => {
     const t = document.getElementById(k);
@@ -341,6 +350,54 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+/* =====================================================================
+   MODO DEMO (sin camara): muestra las escenas delante, se giran con el dedo
+   ===================================================================== */
+const demo = { on: false, yaw: 0, pitch: 0, drag: null, cur: null };
+const NOMBRES = { t0: 'Tira', t1: 'Competitivo', t2: 'Curva patrón', t3: 'Diluciones', t4: 'Marcadores' };
+function colocarDemo() {
+  const t = document.getElementById(demo.cur).object3D;
+  const asp = innerWidth / innerHeight;
+  const hfov = 2 * Math.atan(Math.tan(40 * Math.PI / 180) * asp);
+  const dist0 = 1.1 / (2 * Math.tan(hfov / 2)), dist = Math.max(0.8, dist0), esc = Math.min(1.6, Math.max(1, 0.8 / dist0));
+  const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(demo.pitch, demo.yaw, 0, 'YXZ'));
+  t.matrixAutoUpdate = false;
+  t.matrix.compose(new THREE.Vector3(0, 0.12, -dist), q, new THREE.Vector3(esc, esc, esc));
+  t.matrixWorldNeedsUpdate = true;
+  t.visible = true;
+}
+function verEscenaDemo(k) {
+  tira.run++; comp.run++; curva.run++; dil.run++; marc.run++;
+  Object.keys(escenas).forEach(o => { document.getElementById(o).object3D.visible = false; });
+  demo.cur = k; demo.yaw = 0; demo.pitch = 0;
+  colocarDemo(); escenas[k]();
+  document.querySelectorAll('#chips button').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+}
+function activarDemo() {
+  if (demo.on) { location.reload(); return; }            // segunda pulsacion: volver a la camara
+  demo.on = true;
+  try { document.querySelector('a-scene').systems['mindar-image-system'].stop(); } catch (e) {}
+  document.querySelectorAll('video').forEach(v => v.style.display = 'none');
+  document.body.style.background = 'linear-gradient(#10213a, #274b78)';
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('hint').style.display = 'none';
+  document.getElementById('demoBtn').textContent = 'Volver a la cámara';
+  const chips = document.getElementById('chips'); chips.style.display = 'flex'; chips.innerHTML = '';
+  Object.keys(NOMBRES).forEach(k => {
+    const b = document.createElement('button'); b.textContent = NOMBRES[k]; b.dataset.k = k;
+    b.onclick = () => verEscenaDemo(k); chips.appendChild(b);
+  });
+  const cv = document.querySelector('canvas.a-canvas') || document.querySelector('canvas');
+  const dn = e => { if (e.target.closest('button')) return; demo.drag = [e.clientX, e.clientY]; };
+  const mv = e => { if (!demo.drag) return;
+    demo.yaw += (e.clientX - demo.drag[0]) * 0.008; demo.pitch += (e.clientY - demo.drag[1]) * 0.008;
+    demo.pitch = Math.max(-1.3, Math.min(0.5, demo.pitch)); demo.drag = [e.clientX, e.clientY]; colocarDemo(); };
+  const up = () => { demo.drag = null; };
+  window.addEventListener('pointerdown', dn); window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+  verEscenaDemo('t0');
+}
+document.getElementById('demoBtn').addEventListener('click', activarDemo);
 </script>
 </body>
 </html>
